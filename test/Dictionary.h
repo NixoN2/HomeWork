@@ -30,22 +30,77 @@ public:
 			{
 				return AvlTree<DictPair>::iterator(it);
 			}
+			return end();
 		}
-		return end();
+		
 	}
 	AvlTree<DictPair>::iterator erase(AvlTree<DictPair>::iterator it)
 	{
 		return _tree.erase(it);
 	}
-	Value& operator[](Key key) const
-	{
-		auto it = find(key);
-		return (*it).translate();
-	}
 	AvlTree<DictPair>::iterator erase(Key key)
 	{
 		auto it = find(key);
 		return _tree.erase(it);
+	}
+	Value operator[](Key key) 
+	{
+		auto it = find(key);
+		return (*it).translate();
+	}
+	
+	class DictProxy
+	{
+	private:
+		Key _key;
+	public:
+		DictProxy(Key key) 
+		{
+			_key = key;
+		}
+		DictProxy& operator=(Value val)
+		{
+			auto it = _tree.find(_key);
+			if (it == end())
+			{
+				DictPair pair(_key, val);
+				push_back(pair);
+			}
+			else
+			{
+				(*it).setTranslate(val);
+			}
+		}
+		operator String()
+		{
+			auto it = _tree.find(_key);
+			return (*it).translate();
+		}
+	};
+	DictProxy operator[](const Key& key)
+	{
+		return DictProxy(key);
+	}
+	void erase(AvlTree<DictPair>::iterator beg, AvlTree<DictPair>::iterator ending)
+	{
+		auto iter = beg;
+		if (beg == begin())
+		{
+			iter++;
+			 erase(_tree.begin());
+			 
+		}
+		if (ending == end())
+		{
+			erase(ending);
+		}
+		auto end_key = (*ending).word();
+		while (iter != find(end_key))
+			{
+				iter = erase(iter);
+				
+			}
+
 	}
 	AvlTree<DictPair>::iterator begin() const { return _tree.begin(); }
 	AvlTree<DictPair>::iterator end() const { return _tree.end(); }
