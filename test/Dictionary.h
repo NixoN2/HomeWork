@@ -52,35 +52,26 @@ public:
 	class DictProxy
 	{
 	private:
-		Key _key;
+		DictPair* _pair;
 	public:
-		DictProxy(Key key) 
+		DictProxy(DictPair pair) 
 		{
-			_key = key;
+			_pair = pair;
 		}
-		DictProxy& operator=(Value val)
+		void operator=(Value val)
 		{
-			auto it = find(_key);
-			if (it == end())
-			{
-				DictPair pair(_key, val);
-				push_back(pair);
-			}
-			else
-			{
-				(*it).setTranslate(val);
-			}
+			_pair._translate = val;
 		}
 		operator String()
 		{
-			auto it = find(_key);
-			return (*it).translate();
+			return _pair.translate();
 		}
 		friend class Dictionary;
 	};
 	DictProxy operator[](const Key& key)
 	{
-		return DictProxy(key);
+		DictPair pair(key, "");
+		return DictProxy(pair);
 	}
 	void erase(AvlTree<DictPair>::iterator beg, AvlTree<DictPair>::iterator ending)
 	{
