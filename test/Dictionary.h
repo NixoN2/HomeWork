@@ -22,7 +22,7 @@ public:
 	{
 		return _tree.size();
 	}
-	AvlTree<DictPair>::iterator find(Key key)
+	 AvlTree<DictPair>::iterator find(Key key)
 	{
 		for (auto it = begin(); it != end(); ++it)
 		{
@@ -43,12 +43,12 @@ public:
 		auto it = find(key);
 		return _tree.erase(it);
 	}
-	Value operator[](Key key) 
-	{
-		auto it = find(key);
-		return (*it).translate();
-	}
-	
+	//Value operator[](Key key) 
+	//{
+	//	auto it = find(key);
+	//	return (*it).translate();
+	//}
+	friend class DictProxy;
 	class DictProxy
 	{
 	private:
@@ -60,7 +60,7 @@ public:
 		}
 		DictProxy& operator=(Value val)
 		{
-			auto it = _tree.find(_key);
+			auto it = find(_key);
 			if (it == end())
 			{
 				DictPair pair(_key, val);
@@ -73,9 +73,10 @@ public:
 		}
 		operator String()
 		{
-			auto it = _tree.find(_key);
+			auto it = find(_key);
 			return (*it).translate();
 		}
+		friend class Dictionary;
 	};
 	DictProxy operator[](const Key& key)
 	{
