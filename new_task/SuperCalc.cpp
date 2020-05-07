@@ -1,85 +1,213 @@
-#pragma once
-#include <string>
-#include "Errors.h"
+#include <iostream>
+#include <stack>
+#include "FormulaNode.h"
+#include <map>
+#include <functional>
+#include <sstream>
 #include <cmath>
-class FormulaNode {
-public:
-	virtual double calc() const = 0;
-	virtual std::string str() const = 0;
-	virtual FormulaNode* copy() const = 0;
-	virtual ~FormulaNode() {}
+//
+//1) в классе FormulaNode сделать чистую виртуальную функцию copy(), которая должна возвращать указатель на копию текущего узла с копиями всех своих потомков.
+//Соответственно, перегрузить метод у всех потомков.
+//
+//2) В операторе + создавать новую формулу, передавая в конструктор копии корней.
+//
+//3) Реализовать остальные арифметические операторы для двух формул.Добавить к поддерживаемым в дереве операциям возведение в степень('^').
+//
+//4) Реализовать для формулы конструктор копии, конструктор перемещения, перегрузить операторы присваивания и присваивания от rvalue.
+//
+//5) Реализовать для формулы конструктор от double, тогда можно делать вообще фантастические вещи типа :
+//
+//Formula x("2+1");
+//Formula y("2+3*4");
+//Formula f = x * y + 2;
+//
+//Результатом чего является : (2, 00 + 1, 00)* (2, 00 + (3, 00) * (4, 00)) + 2, 00 = 44.
+//
+//+ к этому предыдущая домашка со словарем.
+//в пятницу будем все проверять.
+//
+//Если есть еще идеи, чего бы интересного с формулами можно сделать — пишите : )
+//По плану нам еще нужно добавить скобочки, функции и переменные.
+//
+//5.5) реализовать конструктор формулы от const char*, тогда вообще космос :
+//
+//Formula f = Formula("1+2") * "2+3*4" + 2;
+
+std::map<char, std::function<double(double, double) >> operator_map =
+{
+	{'+', std::plus<double>()},
+	{'-', std::minus<double>()},
+	{'*', std::multiplies<double>()},
+	{'/', std::divides<double>()},
+	//{'^', }
 };
 
-class NumNode : public FormulaNode {
-    double _num;
-public:
-	NumNode(double num) : _num(num) {}
-	NumNode(const NumNode& node) { _num = node._num; }
-	NumNode(const NumNode&& node) { _num = std::move(node._num); }
-	double calc() const override { return _num; }
-	NumNode* copy() const override { NumNode* node = new NumNode(_num); return node; }
-	std::string str() const override { return std::to_string(_num); }
+double calc_postfix(const std::string& formula_str) {
+	std::stack<double> container;
+	for (char curr : formula_str) {
+		if (isdigit(curr)) {
+			container.push(curr - '0');
+			continue;
+		}
+		double right = container.top(); container.pop();
+		double left = container.top(); container.pop();
+		container.push(operator_map[curr](left, right));
+	}
+	return container.top();
+}
 
-};
+class Formula {
 
-class BinNode : public FormulaNode {
-protected:
-	FormulaNode* _left, * _right;
-public:
-	BinNode(FormulaNode* left, FormulaNode* right) : _left(left), _right(right) {}
-	BinNode(const BinNode& node) : _left(node._left), _right(node._right) {}
-	BinNode(const BinNode&& node)
+	// 1: char -> out_str, in_str++
+	// 2: char -> stack, in_str++
+	// 3: stack -> out_str + stack.pop
+	// 4: finish
+	enum Action { char2str, char2stack, stack2str, finish };
+	const Action ActionTable[6][7] =
 	{
-		_left = std::move(node._left);
-		_right = std::move(node._right);
+		//     0			 +           -           *           /			  ^			   N
+		{    finish,	 char2stack, char2stack, char2stack, char2stack, char2stack ,  char2str}, // 0
+		{	 stack2str,  stack2str,  stack2str,  char2stack, char2stack, char2stack ,  char2str}, // +
+		{	 stack2str,  stack2str,  stack2str,  char2stack, char2stack, char2stack  , char2str}, // -
+		{	 stack2str,  stack2str,  stack2str,  stack2str,  stack2str,  char2stack,    char2str}, // *
+		{	 stack2str,  stack2str,  stack2str,  stack2str,  stack2str,  char2stack,    char2str},  // /
+		{	 stack2str,  stack2str,  stack2str,  stack2str,  stack2str,	 stack2str,	   char2str} // ^
+	};
+
+	size_t ActionColumn(char curr) {
+		switch (curr) {
+		case   0: return 0;
+		case '+': return 1;
+		case '-': return 2;
+		case '*': return 3;
+		case '/': return 4;
+		case '^': return 5;
+		}
+		if (isdigit(curr)) return 6;
+		return 6;
 	}
-	~BinNode() {
-		if (_left) delete _left;
-		if (_right) delete _right;
-		_left = _right = nullptr;
+
+	size_t ActionRow(const std::stack<char>& container) {
+		if (container.empty()) return 0;
+		char curr = container.top();
+		switch (curr) {
+		case   0: return 0;
+		case '+': return 1;
+		case '-': return 2;
+		case '*': return 3;
+		case '/': return 4;
+		case '^': return 5;
+		}
+		return 0;
 	}
+
+	std::map<char, std::function<FormulaNode* (FormulaNode*, FormulaNode*)>> node_map =
+	{
+		{'+', [](FormulaNode* left, FormulaNode* right) {return new PlusNode(left,right); } },
+		{'-', [](FormulaNode* left, FormulaNode* right) {return new MinusNode(left,right); } },
+		{'*', [](FormulaNode* left, FormulaNode* right) {return new MultNode(left,right); } },
+		{'/', [](FormulaNode* left, FormulaNode* right) {return new DivNode(left,right); } },
+		{'^', [](FormulaNode* left, FormulaNode* right) {return new PowNode(left,right); } },
+	};
+
+	FormulaNode* from_postfix(const std::string& postfix_str) {
+		std::stack<FormulaNode*> nodes;
+		for (char curr : postfix_str) {
+			if (isdigit(curr)) {
+				nodes.push(new NumNode(curr - '0'));
+				continue;
+			}
+			FormulaNode* node;
+			auto right = nodes.top(); nodes.pop();
+			auto left = nodes.top(); nodes.pop();
+			nodes.push(node_map[curr](left, right));
+		}
+		return nodes.top();
+	}
+	std::string infix_to_postfix(const std::string& infix_str) {
+		std::stringstream str_stream;
+		size_t in_idx = 0;
+		Action action;
+		std::stack<char> container;
+		do {
+			size_t col = ActionColumn(infix_str[in_idx]);
+			size_t row = ActionRow(container);
+			action = ActionTable[row][col];
+			switch (action) {
+			case char2str: str_stream << infix_str[in_idx++]; break;
+			case char2stack: container.push(infix_str[in_idx++]); break;
+			case stack2str: {
+				str_stream << container.top();
+				container.pop();
+				break;
+			}
+			}
+		} while (action != finish);
+		return str_stream.str();
+	}
+
+	FormulaNode* _root;
+public:
+	Formula(const std::string& str, bool is_postfix = false) { _root = from_postfix(is_postfix ? str : infix_to_postfix(str)); }
+	Formula(const Formula& f) { _root = f._root;}
+	Formula(const Formula&& f) { _root = std::move(f._root); }
+	Formula(double val) { _root = from_postfix(std::to_string(val)); }
+	Formula(const char* str) { _root = from_postfix(infix_to_postfix(str)); }
+	double calc() const { return _root ? _root->calc() : 0; }
+	std::string str() const { return _root ? _root->str() : ""; }
+	Formula(FormulaNode* node) : _root(node) {}
+	Formula operator+(const Formula& f) const {
+		return Formula(new PlusNode(_root->copy(), f._root->copy()));
+	}
+	Formula operator-(const Formula& f) const {
+		return Formula(new MinusNode(_root->copy(), f._root->copy()));
+	}
+	Formula operator*(const Formula& f) const {
+		return Formula(new MultNode(_root->copy(), f._root->copy()));
+	}
+	Formula operator/(const Formula& f) const {
+		return Formula(new DivNode(_root->copy(), f._root->copy()));
+	}
+	Formula operator=(const Formula& f) 
+	{
+		if (f._root) _root = f._root;
+		return *this;
+	}
+	Formula operator=(const Formula&& f) 
+	{
+		if (f._root) _root = std::move(f._root);
+		return *this;
+	}
+	~Formula() {
+		if (_root) delete _root;
+		_root = nullptr;
+	}
+	
 };
 
-class PlusNode : public BinNode {
-public:
-	PlusNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
-	double calc() const override { return _left->calc() + _right->calc(); }
-	std::string str() const override { return _left->str() + " + " + _right->str(); }
-	PlusNode* copy() const override { PlusNode* node = new PlusNode(_left, _right); return node; }
-};
+int main() {
+	setlocale(LC_ALL, "Rus");
+	//"2+2" <-> "22+"
+	//"4*(2+3)-5/2" <-> "23+4*52/-"
+	//"2+(3*4)" <-> "234*+" <-> "34*2+"
+	//wrong translation: "23+4*"
+	//"-2" <-> "02-"
 
-class MinusNode : public BinNode {
-public:
-	MinusNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
-	double calc() const override { return _left->calc() - _right->calc(); }
-	std::string str() const override { return _left->str() + " - " + _right->str(); }
-	MinusNode* copy() const override { MinusNode* node = new MinusNode(_left, _right); return node; }
-};
+	//std::cout << calc_postfix("23+4*50/-") << std::endl;
 
-class MultNode : public BinNode {
-public:
-	MultNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
-	double calc() const override { return _left->calc() * _right->calc(); }
-	std::string str() const override { return "(" + _left->str() + ")*(" + _right->str() + ")"; }
-	MultNode* copy() const override { MultNode* node = new MultNode(_left, _right); return node; }
-};
-
-class DivNode : public BinNode {
-public:
-	DivNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
-	double calc() const override {
-		if (_right->calc() == 0) throw ErrorDivByZero();
-		return _left->calc() / _right->calc();
+	//Formula f("23+4*52/-");
+	//Formula f("2+3*4-5/2");
+	Formula x("234*+52/-", true);
+	Formula y("2+3*4-5/2");
+	Formula f = x + y;
+	Formula z("2*2^5");
+	try {
+		std::cout << z.str() << " = " << z.calc() << std::endl;
 	}
-	std::string str() const override { return "(" + _left->str() + ")/(" + _right->str() + ")"; }
-	DivNode* copy() const override { DivNode* node = new DivNode(_left, _right); return node; }
-};
-class PowNode : public BinNode {
-public: 
-	PowNode(FormulaNode* left, FormulaNode* right) : BinNode(left,right) {}
-	double calc() const override {
-		return pow(_left->calc(), _right->calc());
+	catch (const Error& e) {
+		std::cout << "Error: " << e.what() << std::endl;
 	}
-	std::string str() const override { return "(" + _left->str() + ")^(" + _right->str() + ")"; }
-	PowNode* copy() const override { PowNode* node = new PowNode(_left, _right); return node; }
-};
+
+	system("pause");
+	return 0;
+}
