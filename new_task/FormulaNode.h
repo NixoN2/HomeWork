@@ -45,7 +45,7 @@ public:
 	PlusNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
 	double calc() const override { return _left->calc() + _right->calc(); }
 	std::string str() const override { return _left->str() + " + " + _right->str(); }
-	PlusNode* copy() const override { PlusNode* node = new PlusNode(_left, _right); return node; }
+	PlusNode* copy() const override { PlusNode* node = new PlusNode(_left->copy(), _right->copy()); return node; }
 };
 
 class MinusNode : public BinNode {
@@ -53,7 +53,7 @@ public:
 	MinusNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
 	double calc() const override { return _left->calc() - _right->calc(); }
 	std::string str() const override { return _left->str() + " - " + _right->str(); }
-	MinusNode* copy() const override { MinusNode* node = new MinusNode(_left, _right); return node; }
+	MinusNode* copy() const override { MinusNode* node = new MinusNode(_left->copy(), _right->copy()); return node; }
 };
 
 class MultNode : public BinNode {
@@ -61,7 +61,7 @@ public:
 	MultNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
 	double calc() const override { return _left->calc() * _right->calc(); }
 	std::string str() const override { return "(" + _left->str() + ")*(" + _right->str() + ")"; }
-	MultNode* copy() const override { MultNode* node = new MultNode(_left, _right); return node; }
+	MultNode* copy() const override { MultNode* node = new MultNode(_left->copy(), _right->copy()); return node; }
 };
 
 class DivNode : public BinNode {
@@ -72,7 +72,7 @@ public:
 		return _left->calc() / _right->calc();
 	}
 	std::string str() const override { return "(" + _left->str() + ")/(" + _right->str() + ")"; }
-	DivNode* copy() const override { DivNode* node = new DivNode(_left, _right); return node; }
+	DivNode* copy() const override { DivNode* node = new DivNode(_left->copy(), _right->copy()); return node; }
 };
 class PowNode : public BinNode {
 public: 
@@ -81,5 +81,5 @@ public:
 		return pow(_left->calc(), _right->calc());
 	}
 	std::string str() const override { return "(" + _left->str() + ")^(" + _right->str() + ")"; }
-	PowNode* copy() const override { PowNode* node = new PowNode(_left, _right); return node; }
+	PowNode* copy() const override { PowNode* node = new PowNode(_left->copy(), _right->copy()); return node; }
 };
