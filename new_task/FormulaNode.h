@@ -1,12 +1,12 @@
 #pragma once
 #include <string>
 #include "Errors.h"
-
+#include <cmath>
 class FormulaNode {
 public:
 	virtual double calc() const = 0;
 	virtual std::string str() const = 0;
-	virtual FormulaNode* copy() = 0;
+	virtual FormulaNode* copy() const = 0;
 	virtual ~FormulaNode() {}
 };
 
@@ -17,7 +17,7 @@ public:
 	NumNode(const NumNode& node) { _num = node._num; }
 	NumNode(const NumNode&& node) { _num = std::move(node._num); }
 	double calc() const override { return _num; }
-	NumNode* copy() { NumNode* node = &NumNode(_num); return node; }
+	NumNode* copy() const override { NumNode* node = new NumNode(_num); return node; }
 	std::string str() const override { return std::to_string(_num); }
 
 };
@@ -45,7 +45,7 @@ public:
 	PlusNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
 	double calc() const override { return _left->calc() + _right->calc(); }
 	std::string str() const override { return _left->str() + " + " + _right->str(); }
-	PlusNode* copy() { PlusNode* node = &PlusNode(_left, _right); return node; }
+	PlusNode* copy() const override { PlusNode* node = new PlusNode(_left, _right); return node; }
 };
 
 class MinusNode : public BinNode {
@@ -53,7 +53,7 @@ public:
 	MinusNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
 	double calc() const override { return _left->calc() - _right->calc(); }
 	std::string str() const override { return _left->str() + " - " + _right->str(); }
-	MinusNode* copy() { MinusNode* node = &MinusNode(_left, _right); return node; }
+	MinusNode* copy() const override { MinusNode* node = new MinusNode(_left, _right); return node; }
 };
 
 class MultNode : public BinNode {
@@ -61,7 +61,7 @@ public:
 	MultNode(FormulaNode* left, FormulaNode* right) : BinNode(left, right) {}
 	double calc() const override { return _left->calc() * _right->calc(); }
 	std::string str() const override { return "(" + _left->str() + ")*(" + _right->str() + ")"; }
-	MultNode* copy() { MultNode* node = &MultNode(_left, _right); return node; }
+	MultNode* copy() const override { MultNode* node = new MultNode(_left, _right); return node; }
 };
 
 class DivNode : public BinNode {
@@ -72,5 +72,14 @@ public:
 		return _left->calc() / _right->calc();
 	}
 	std::string str() const override { return "(" + _left->str() + ")/(" + _right->str() + ")"; }
-	DivNode* copy() { DivNode* node = &DivNode(_left, _right); return node; }
+	DivNode* copy() const override { DivNode* node = new DivNode(_left, _right); return node; }
+};
+class PowNode : public BinNode {
+public: 
+	PowNode(FormulaNode* left, FormulaNode* right) : BinNode(left,right) {}
+	double calc() const override {
+		return pow(_left->calc(), _right->calc());
+	}
+	std::string str() const override { return "(" + _left->str() + ")^(" + _right->str() + ")"; }
+	PowNode* copy() const override { PowNode* node = new PowNode(_left, _right); return node; }
 };
