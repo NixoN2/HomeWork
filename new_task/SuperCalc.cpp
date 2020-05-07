@@ -151,7 +151,8 @@ public:
 	Formula(const std::string& str, bool is_postfix = false) { _root = from_postfix(is_postfix ? str : infix_to_postfix(str)); }
 	Formula(const Formula& f) { _root = f._root;}
 	Formula(const Formula&& f) { _root = std::move(f._root); }
-	//Formula(double val) { _root = ; }
+	Formula(double val) { _root = from_postfix(std::to_string(val)); }
+	Formula(const char* str) { _root = from_postfix(infix_to_postfix(str)); }
 	double calc() const { return _root ? _root->calc() : 0; }
 	std::string str() const { return _root ? _root->str() : ""; }
 	Formula(FormulaNode* node) : _root(node) {}
@@ -199,8 +200,9 @@ int main() {
 	Formula x("234*+52/-", true);
 	Formula y("2+3*4-5/2");
 	Formula f = x + y;
+	Formula z("2^5");
 	try {
-		std::cout << f.str() << " = " << f.calc() << std::endl;
+		std::cout << z.str() << " = " << z.calc() << std::endl;
 	}
 	catch (const Error& e) {
 		std::cout << "Error: " << e.what() << std::endl;
