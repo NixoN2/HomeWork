@@ -5,6 +5,33 @@
 #include <functional>
 #include <sstream>
 #include <cmath>
+//
+//1) в классе FormulaNode сделать чистую виртуальную функцию copy(), которая должна возвращать указатель на копию текущего узла с копиями всех своих потомков.
+//Соответственно, перегрузить метод у всех потомков.
+//
+//2) В операторе + создавать новую формулу, передавая в конструктор копии корней.
+//
+//3) Реализовать остальные арифметические операторы для двух формул.Добавить к поддерживаемым в дереве операциям возведение в степень('^').
+//
+//4) Реализовать для формулы конструктор копии, конструктор перемещения, перегрузить операторы присваивания и присваивания от rvalue.
+//
+//5) Реализовать для формулы конструктор от double, тогда можно делать вообще фантастические вещи типа :
+//
+//Formula x("2+1");
+//Formula y("2+3*4");
+//Formula f = x * y + 2;
+//
+//Результатом чего является : (2, 00 + 1, 00)* (2, 00 + (3, 00) * (4, 00)) + 2, 00 = 44.
+//
+//+ к этому предыдущая домашка со словарем.
+//в пятницу будем все проверять.
+//
+//Если есть еще идеи, чего бы интересного с формулами можно сделать — пишите : )
+//По плану нам еще нужно добавить скобочки, функции и переменные.
+//
+//5.5) реализовать конструктор формулы от const char*, тогда вообще космос :
+//
+//Formula f = Formula("1+2") * "2+3*4" + 2;
 
 std::map<char, std::function<double(double, double) >> operator_map =
 {
@@ -124,8 +151,8 @@ public:
 	Formula(const std::string& str, bool is_postfix = false) { _root = from_postfix(is_postfix ? str : infix_to_postfix(str)); }
 	Formula(const Formula& f) { _root = f._root;}
 	Formula(const Formula&& f) { _root = std::move(f._root); }
-	Formula(double val) { _root = from_postfix(std::to_string(val)); }
-	Formula(const char* str) { _root = from_postfix(infix_to_postfix(str)); }
+	Formula(double val) { _root = new NumNode(val); }
+	Formula(const char* str) { Formula(std::string(str)); }
 	double calc() const { return _root ? _root->calc() : 0; }
 	std::string str() const { return _root ? _root->str() : ""; }
 	Formula(FormulaNode* node) : _root(node) {}
@@ -141,15 +168,33 @@ public:
 	Formula operator/(const Formula& f) const {
 		return Formula(new DivNode(_root->copy(), f._root->copy()));
 	}
-	Formula operator=(const Formula& f) 
+	Formula& operator=(const Formula& f) 
 	{
-		if (f._root) _root = f._root;
-		return *this;
+		if (f._root) {
+			if (_root != f._root)
+			{
+				delete _root;
+				_root = f._root->copy();
+			}
+		}
+		else {
+			return *this;
+		}
 	}
-	Formula operator=(const Formula&& f) 
-	{
-		if (f._root) _root = std::move(f._root);
-		return *this;
+	Formula& operator=(const Formula&& f) 
+	{	
+		if (f._root)
+		{
+
+			if (_root != f._root)
+			{
+				delete _root;
+				_root = std::move(f._root->copy());
+			}
+		}
+		else {
+			return *this;
+		}
 	}
 	~Formula() {
 		if (_root) delete _root;
@@ -173,9 +218,9 @@ int main() {
 	Formula x("234*+52/-", true);
 	Formula y("2+3*4-5/2");
 	Formula f = x + y;
-	Formula z("2*2^5");
+	//Formula z("2*2^5");
 	try {
-		std::cout << z.str() << " = " << z.calc() << std::endl;
+		std::cout << f.str() << " = " << f.calc() << std::endl;
 	}
 	catch (const Error& e) {
 		std::cout << "Error: " << e.what() << std::endl;
