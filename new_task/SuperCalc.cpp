@@ -107,7 +107,7 @@ class Formula {
 		{'-', [](FormulaNode* left, FormulaNode* right) {return new MinusNode(left,right); } },
 		{'*', [](FormulaNode* left, FormulaNode* right) {return new MultNode(left,right); } },
 		{'/', [](FormulaNode* left, FormulaNode* right) {return new DivNode(left,right); } },
-		{'^', [](FormulaNode* left, FormulaNode* right) {return new PowNode(left,right); } },
+		{'^', [](FormulaNode* left, FormulaNode* right) {return new PowNode(left,right); } }
 	};
 
 	FormulaNode* from_postfix(const std::string& postfix_str) {
@@ -149,7 +149,7 @@ class Formula {
 	FormulaNode* _root;
 public:
 	Formula(const std::string& str, bool is_postfix = false) { _root = from_postfix(is_postfix ? str : infix_to_postfix(str)); }
-	Formula(const Formula& f) { _root = f._root;}
+	Formula(const Formula& f) { _root = f._root; }
 	Formula(const Formula&& f) { _root = std::move(f._root); }
 	Formula(double val) { _root = new NumNode(val); }
 	Formula(const char* str) { Formula(std::string(str)); }
@@ -168,31 +168,22 @@ public:
 	Formula operator/(const Formula& f) const {
 		return Formula(new DivNode(_root->copy(), f._root->copy()));
 	}
-	Formula& operator=(const Formula& f) 
+	Formula& operator=(const Formula& f)
 	{
-		if (f._root) {
-			if (_root != f._root)
-			{
-				delete _root;
-				_root = f._root->copy();
-			}
-		}
-		else {
+		if (!f._root || _root == f._root) return *this; else {
+			delete _root;
+			_root = f._root->copy();
 			return *this;
 		}
 	}
-	Formula& operator=(const Formula&& f) 
-	{	
-		if (f._root)
+	Formula& operator=(const Formula&& f)
+	{
+		if (!f._root || _root == f._root) return *this; else
 		{
 
-			if (_root != f._root)
-			{
-				delete _root;
-				_root = std::move(f._root->copy());
-			}
-		}
-		else {
+
+			delete _root;
+			_root = std::move(f._root->copy());
 			return *this;
 		}
 	}
@@ -200,10 +191,9 @@ public:
 		if (_root) delete _root;
 		_root = nullptr;
 	}
-	
-};
 
-int main() {
+};
+int main(){
 	setlocale(LC_ALL, "Rus");
 	//"2+2" <-> "22+"
 	//"4*(2+3)-5/2" <-> "23+4*52/-"
@@ -215,10 +205,17 @@ int main() {
 
 	//Formula f("23+4*52/-");
 	//Formula f("2+3*4-5/2");
+
 	Formula x("234*+52/-", true);
 	Formula y("2+3*4-5/2");
 	Formula f = x + y;
-	//Formula z("2*2^5");
+
+	/*Formula x("2*2^3+1");
+	Formula f = x ^ 2;
+	f *= "8 / 2";*/
+
+	Formula f2 = f;
+	f2 = 3;
 	try {
 		std::cout << f.str() << " = " << f.calc() << std::endl;
 	}
